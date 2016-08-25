@@ -8,6 +8,9 @@ import time
 pp = pprint.PrettyPrinter()
 
 
+server_type = ""
+
+
 def pretty_print(data):
 	print json.dumps(data, sort_keys=True, indent=4, separators=(',', ': '))
 
@@ -26,11 +29,12 @@ def get_syncserv_port():
 			print str(e)
 		if resp:
 			print resp
-			if resp.status_code == 200:
+			if resp.status_code == 200 and "sync" in resp.text:
+				server_type = resp.text
+				print "Got port for peer of type: " + server_type
 				return PORT
-		else:
-			print "Sync server not serving on: " + url + ":" + str(PORT)
-			PORT += 1
+		print "Sync server not serving on: " + url + ":" + str(PORT)
+		PORT += 1
 	return
 
 
