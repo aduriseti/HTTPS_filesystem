@@ -18,9 +18,10 @@ def get_syncserv_port():
 	#try 100 ports above one specified
 	PORT = 8000
 	for retry in range(0, 10):
+		print "Trying: " + str(url) + ":" + str(PORT)
 		resp = None
 		try:
-			resp = requests.post("http://" + url + ":" + str(PORT))
+			resp = requests.get("http://" + url + ":" + str(PORT), params = {"client_type": "sync_client"})
 		except Exception, e:
 			print str(e)
 		if resp:
@@ -95,7 +96,7 @@ try:
 	while True:
 		time.sleep(0.01)
 		[modified_objs, file_obj_map] = get_modified_objs(cwd, file_obj_map)
-		sync_objs(modified_objs, url, PORT)
+		#sync_objs(modified_objs, url, PORT)
 except KeyboardInterrupt:
 	pass
 			
