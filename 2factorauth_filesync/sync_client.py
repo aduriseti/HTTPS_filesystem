@@ -96,7 +96,7 @@ try:
 	while True:
 		time.sleep(0.01)
 		[modified_objs, file_obj_map] = get_modified_objs(cwd, file_obj_map)
-		#sync_objs(modified_objs, url, PORT)
+		sync_objs(modified_objs, url, PORT)
 except KeyboardInterrupt:
 	pass
 			

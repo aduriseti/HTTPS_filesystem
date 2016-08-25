@@ -1,5 +1,6 @@
 from BaseHTTPServer import BaseHTTPRequestHandler
-from BaseHTTPServer import BaseHTTPServer
+from BaseHTTPServer import HTTPServer
+import json
 import SocketServer
 import logging
 import cgi
@@ -20,13 +21,17 @@ class ServerHandler(BaseHTTPRequestHandler):
 			self.send_response(200)
 			self.end_headers()
 			self.wfile.write("sync_server")
+		return
 
 
 	def do_POST(self):
-
-		return
 		print "In http post handler".upper()
 		print self.headers
+		query = urlparse.urlparse(self.path).query
+		query_components = {}
+		if query and "=" in query:
+			pass
+			query_components = dict(qc.split("=") for qc in query.split("&"))
 		form = cgi.FieldStorage(
 			fp=self.rfile,
 			headers=self.headers,
@@ -62,7 +67,6 @@ class ServerHandler(BaseHTTPRequestHandler):
 					except:
 						print "WRITING TO BACKUP FAILED"
 						continue
-
 				with open(form[key].filename, "wb") as outfile:
 					for line in form[key].file:
 						outfile.write(line)
@@ -75,7 +79,8 @@ class ServerHandler(BaseHTTPRequestHandler):
 					print form[key].file
 				except:
 					pass
-		SimpleHTTPServer.SimpleHTTPRequestHandler.do_GET(self)
+		self.send_response(200)
+		self.end_headers()
 
 
 if __name__ == "__main__":
