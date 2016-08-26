@@ -85,20 +85,20 @@ class ServerHandler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
 	if len(sys.argv) > 1:
-		PORT = int(sys.argv[1])
+		port = int(sys.argv[1])
 	else:
-		PORT = 8000
+		port = 8000
 	Handler = ServerHandler
 	#try 100 ports above one specified
 	for retry in range(0, 100):
 		try:
-			httpd = SocketServer.TCPServer(("", PORT), Handler)
-			print "serving at port", PORT
+			httpd = SocketServer.TCPServer(("", port), Handler)
+			print "serving at port", port
 			httpd.serve_forever()
 		except SocketServer.socket.error as exc:
 			if exc.args[0] != 48:
 				raise
-			print 'Port ', PORT, ' already in use'
-			PORT += 1
+			print 'port ', port, ' already in use'
+			port += 1
 		else:
 			break
