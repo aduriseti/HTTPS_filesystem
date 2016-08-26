@@ -23,6 +23,28 @@ def pretty_print(data):
 	print json.dumps(data, sort_keys=True, indent=4, separators=(',', ': '))
 
 
+class SyncPeer():
+
+	def __init__(self):
+		self.m_sync_server = SyncServer
+		#try 100 ports above one specified
+		for retry in range(0, 100):
+			try:
+				httpd = SocketServer.TCPServer(("", port), self.m_sync_server)
+				print "serving at port", port
+				httpd.serve_forever()
+			except SocketServer.socket.error as exc:
+				if exc.args[0] != 48:
+					raise
+				print 'port ', port, ' already in use'
+				port += 1
+			else:
+				break
+		self.m_sync_client = SyncClient(url, port)
+		self.m_sync_client.start()
+
+
+
 class ServerHandler(BaseHTTPRequestHandler):
 	def do_GET(self):
 		print "In http get handler".upper()

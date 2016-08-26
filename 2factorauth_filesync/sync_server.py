@@ -10,7 +10,7 @@ import shutil
 import urlparse
 
 
-class ServerHandler(BaseHTTPRequestHandler):
+class SyncServer(BaseHTTPRequestHandler):
 	def do_GET(self):
 		print "In http get handler".upper()
 		print self.headers
@@ -88,7 +88,7 @@ if __name__ == "__main__":
 		port = int(sys.argv[1])
 	else:
 		port = 8000
-	Handler = ServerHandler
+	Handler = SyncServer
 	#try 100 ports above one specified
 	for retry in range(0, 100):
 		try:
