@@ -96,9 +96,10 @@ if __name__ == "__main__":
 			print "serving at port", port
 			httpd.serve_forever()
 		except SocketServer.socket.error as exc:
-			if exc.args[0] != 48:
+			print 'port ' + str(port) + ' already in use'
+			if exc.args[0] != 48 and exc.args[0] != 98:
+				print "raise"
 				raise
-			print 'port ', port, ' already in use'
 			port += 1
 		else:
 			break
