@@ -7,9 +7,7 @@ import time
 
 pp = pprint.PrettyPrinter()
 
-
 server_type = ""
-
 
 def pretty_print(data):
 	print json.dumps(data, sort_keys=True, indent=4, separators=(',', ': '))
@@ -34,9 +32,10 @@ class SyncClient():
 	def __init__(self, url = "10.10.1.6", port = 8000):
 		self.m_url = url
 		self.m_port = port
-		self.m_port = self.get_syncserv_port()
 		self.m_cwd = os.getcwd()
-		if not self.m_port:
+		self.m_server_type = ""
+		self.get_syncserv_port()
+		if not self.m_server_type:
 			self.inject_sync_server()
 		self.m_file_obj_map = {}
 			
@@ -48,7 +47,6 @@ class SyncClient():
 			while True:
 				time.sleep(0.01)
 				modified_objs = self.get_modified_objs()
-				print modified_objs
 				self.sync_objs(modified_objs)
 		except KeyboardInterrupt:
 			pass 
@@ -56,29 +54,42 @@ class SyncClient():
 	def inject_sync_server(self):
 		print "Enter a directory to sync changes to: "
 		dir_name = raw_input()
-		cmd = "cat ./sync_server.py | ssh aduriseti@" + str(self.m_url) + " python &;"
+		#cmd = "cat ./sync_server.py | ssh aduriseti@" + str(self.m_url) + " 'cat > " + str(dir_name) + "/sync_server.py'"
+		#cmd = "cat ./sync_server.py | ssh aduriseti@" + str(self.m_url) + " 'cd " + str(dir_name) + "; cat > ./sync_server.py'"
+		#cmd = "cat ./sync_server.py | ssh aduriseti@" + str(self.m_url) + " 'cd " + str(dir_name) + "; python - " + str(self.m_port) + " &'"
+		#cmd = "cat ./sync_server.py | ssh aduriseti@" + str(self.m_url) + " 'cd " + str(dir_name) + "; python -'"
+		#cmd = "cat ./sync_server.py | ssh root@" + str(self.m_url) + " 'cd " + str(dir_name) + "; cat > ./sync_server.py; python ./sync_server.py " + str(self.m_port) + "'"
+		#cmd = "cat sync_server.py | ssh root@" + str(self.m_url) + " 'cd " + str(dir_name) + "; python - 8000 &'"
+		pyfile = 'with open("nums", "wb") as numfile: for num in range(0, 100): numfile.write(num)'
+		cmd = "echo '" + str(pyfile) + "' | ssh root@" + str(self.m_url) + " 'cd " + str(dir_name) + "; python - &'"
+		print cmd
 		os.system(cmd)
+		for retry in range(0, 10):
+			time.sleep(1)
+			self.get_syncserv_port()
 
 	#TODO: establish connection open protocol to establish that the server on the other end is a sync server
 	def get_syncserv_port(self):
 		#try 100 ports above one specified in __init__
-		print "Trying: " + str(self.m_url) + ":" + str(self.m_port)
-		for retry in range(0, 100):
-			#print "Trying: " + str(self.m_url) + ":" + str(self.m_port)
+		port = self.m_port
+		print "Trying: " + str(self.m_url) + ":" + str(port)
+		for retry in range(0, 10):
+			#print "Trying: " + str(self.m_url) + ":" + str(port)
 			resp = None
 			try:
-				resp = requests.get("http://" + self.m_url + ":" + str(self.m_port), params = {"client_type": "sync_client"})
+				resp = requests.get("http://" + self.m_url + ":" + str(port), params = {"client_type": "sync_client"})
 			except Exception, e:
 				pass
 				#print str(e)
 			if resp:
 				print resp
 				if resp.status_code == 200 and "sync" in resp.text:
-					server_type = resp.text
-					print "Got port for peer of type: " + server_type
-					return self.m_port
-			#print "Sync server not serving on: " + self.m_url + ":" + str(self.m_port)
-			self.m_port += 1
+					self.m_server_type = resp.text
+					print "Got port for peer of type: " + self.m_server_type
+					self.m_port = port
+					return
+			#print "Sync server not serving on: " + self.m_url + ":" + str(port)
+			port += 1
 		return
 
 	def get_modified_objs(self):
@@ -99,8 +110,9 @@ class SyncClient():
 		return modified_objs
 
 	def sync_objs(self, modified_objs):
+		if not self.m_server_type:
+			return
 		for file_obj in modified_objs:
-			print file_obj
 			filepath = file_obj.m_filepath
 			print "Syncing: " + filepath
 			try:

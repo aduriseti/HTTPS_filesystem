@@ -10,7 +10,7 @@ import shutil
 import urlparse
 
 
-class ServerHandler(BaseHTTPRequestHandler):
+class SyncServer(BaseHTTPRequestHandler):
 	def do_GET(self):
 		print "In http get handler".upper()
 		print self.headers
@@ -85,20 +85,21 @@ class ServerHandler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
 	if len(sys.argv) > 1:
-		PORT = int(sys.argv[1])
+		port = int(sys.argv[1])
 	else:
-		PORT = 8000
-	Handler = ServerHandler
+		port = 8000
+	Handler = SyncServer
 	#try 100 ports above one specified
 	for retry in range(0, 100):
 		try:
-			httpd = SocketServer.TCPServer(("", PORT), Handler)
-			print "serving at port", PORT
+			httpd = SocketServer.TCPServer(("", port), Handler)
+			print "serving at port", port
 			httpd.serve_forever()
 		except SocketServer.socket.error as exc:
-			if exc.args[0] != 48:
+			print 'port ' + str(port) + ' already in use'
+			if exc.args[0] != 48 and exc.args[0] != 98:
+				print "raise"
 				raise
-			print 'Port ', PORT, ' already in use'
-			PORT += 1
+			port += 1
 		else:
 			break

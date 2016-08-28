@@ -23,7 +23,6 @@ class SyncServer(BaseHTTPRequestHandler):
 			self.wfile.write("sync_server")
 		return
 
-
 	def do_POST(self):
 		print "In http post handler".upper()
 		print self.headers
@@ -103,3 +102,6 @@ if __name__ == "__main__":
 			port += 1
 		else:
 			break
+
+
+
