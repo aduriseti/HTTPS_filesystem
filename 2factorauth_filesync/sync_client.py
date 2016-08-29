@@ -1,6 +1,7 @@
 import requests
 import sys
 import os
+import subprocess
 import pprint
 import socket
 import time
@@ -34,6 +35,7 @@ class SyncClient():
 		self.m_port = port
 		self.m_cwd = os.getcwd()
 		self.m_server_type = ""
+		self.m_server_proc = None
 		self.get_syncserv_port()
 		if not self.m_server_type:
 			self.inject_sync_server()
@@ -49,6 +51,11 @@ class SyncClient():
 				modified_objs = self.get_modified_objs()
 				self.sync_objs(modified_objs)
 		except KeyboardInterrupt:
+			#TODO: send server a kill signal to clean up that process on remote host
+			#TODO: use disk to persist deltas from previous connection
+			#TODO: make associated sync files hidden to avoid cluttering remote host
+			if self.m_server_proc:
+				self.m_server_proc.kill()
 			pass 
 
 	def inject_sync_server(self):
@@ -61,12 +68,18 @@ class SyncClient():
 		#cmd = "cat ./sync_server.py | ssh root@" + str(self.m_url) + " 'cd " + str(dir_name) + "; cat > ./sync_server.py; python ./sync_server.py " + str(self.m_port) + "'"
 		#cmd = "cat sync_server.py | ssh root@" + str(self.m_url) + " 'cd " + str(dir_name) + "; python - 8000 &'"
 		pyfile = 'with open("nums", "wb") as numfile: for num in range(0, 100): numfile.write(num)'
-		cmd = "echo '" + str(pyfile) + "' | ssh root@" + str(self.m_url) + " 'cd " + str(dir_name) + "; python - &'"
+		cmd = "echo '" + str(pyfile) + "' | ssh root@" + str(self.m_url) + " 'cd " + str(dir_name) + "; python - '"
+		cmd = "cat ./sync_server.py | ssh root@" + str(self.m_url) + " 'cd " + str(dir_name) + "; cat > ./sync_server.py'"
+		#cmd = "cat ./sync_server.py | ssh root@" + str(self.m_url) + " 'python sync_server.py' " 
+		cmd = "cat ./sync_server.py | ssh root@" + str(self.m_url) + " 'cd " + str(dir_name) + "; python - " + str(self.m_port) +" > sync_serv_log 2>&1' "
 		print cmd
-		os.system(cmd)
+		#os.system(cmd)
+		self.m_server_proc = subprocess.Popen(cmd, stdout = subprocess.PIPE, shell=True)
 		for retry in range(0, 10):
 			time.sleep(1)
 			self.get_syncserv_port()
+			if self.m_server_type: return
+		self.m_server_proc.kill()
 
 	#TODO: establish connection open protocol to establish that the server on the other end is a sync server
 	def get_syncserv_port(self):
@@ -83,12 +96,14 @@ class SyncClient():
 				#print str(e)
 			if resp:
 				print resp
-				if resp.status_code == 200 and "sync" in resp.text:
-					self.m_server_type = resp.text
-					print "Got port for peer of type: " + self.m_server_type
-					self.m_port = port
-					return
-			#print "Sync server not serving on: " + self.m_url + ":" + str(port)
+				if resp.status_code == 200:
+					if "sync" in resp.text:
+						self.m_server_type = resp.text
+						print "Got port for peer of type: " + self.m_server_type
+						self.m_port = port
+						return
+					else:
+						print "Server on: " + self.m_url + ":" + str(port) + " isn't sync server"
 			port += 1
 		return
 
