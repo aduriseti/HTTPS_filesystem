@@ -145,7 +145,7 @@ if __name__ == "__main__":
 		port = int(sys.argv[1])
 	else:
 		port = 8000
-	sync_server = SyncServer("localhost", port)
+	sync_server = SyncServer("", port)
 	sync_server.start()
 
 
