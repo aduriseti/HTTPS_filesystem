@@ -1,13 +1,13 @@
 from setuptools import setup
 
-setup(name='2factorauth_filesync',
+setup(name='HTTPS_filesystem',
 	version='1.1',
-	description='A file sync utility that mimics the functionality of WinSCP for Unix based platforms and only requires approval once from 2 stage authentication',
+	description='A file sync utility that uses https to provide an abstraction of a local filesystem "mounted" on a remote host',
 	url='https://github.com/aduriseti/FileSync_2_stage_authentication.git',
 	author='Amal Duriseti',
 	author_email='aduriseti@gmail.com',
 	license='MIT',
-	packages=['2factorauth_filesync'],
+	packages=['HTTPS_filesystem'],
 	install_requires=[
 		'requests',
 	],
