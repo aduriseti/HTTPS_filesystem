@@ -30,7 +30,9 @@ class FileObject:
 
 
 class SyncClient():
-	def __init__(self, url = "10.10.1.6", port = 8000):
+	def __init__(self, user = "aduriseti", url = "10.10.1.6", port = 8000):
+		#TODO: create argument for mount point i.e. folder in remote host file system to sync with
+		self.m_user = user
 		self.m_url = url
 		self.m_port = port
 		self.m_cwd = os.getcwd()
@@ -54,27 +56,20 @@ class SyncClient():
 			#TODO: send server a kill signal to clean up that process on remote host
 			#TODO: use disk to persist deltas from previous connection
 			#TODO: make associated sync files hidden to avoid cluttering remote host
+			if self.m_server_type:
+				self.send_kill_signal()
 			if self.m_server_proc:
 				self.m_server_proc.kill()
-			pass 
+			sys.exit(0)
 
 	def inject_sync_server(self):
 		print "Enter a directory to sync changes to: "
 		dir_name = raw_input()
-		#cmd = "cat ./sync_server.py | ssh aduriseti@" + str(self.m_url) + " 'cat > " + str(dir_name) + "/sync_server.py'"
-		#cmd = "cat ./sync_server.py | ssh aduriseti@" + str(self.m_url) + " 'cd " + str(dir_name) + "; cat > ./sync_server.py'"
-		#cmd = "cat ./sync_server.py | ssh aduriseti@" + str(self.m_url) + " 'cd " + str(dir_name) + "; python - " + str(self.m_port) + " &'"
-		#cmd = "cat ./sync_server.py | ssh aduriseti@" + str(self.m_url) + " 'cd " + str(dir_name) + "; python -'"
-		#cmd = "cat ./sync_server.py | ssh root@" + str(self.m_url) + " 'cd " + str(dir_name) + "; cat > ./sync_server.py; python ./sync_server.py " + str(self.m_port) + "'"
-		#cmd = "cat sync_server.py | ssh root@" + str(self.m_url) + " 'cd " + str(dir_name) + "; python - 8000 &'"
-		pyfile = 'with open("nums", "wb") as numfile: for num in range(0, 100): numfile.write(num)'
-		cmd = "echo '" + str(pyfile) + "' | ssh root@" + str(self.m_url) + " 'cd " + str(dir_name) + "; python - '"
-		cmd = "cat ./sync_server.py | ssh root@" + str(self.m_url) + " 'cd " + str(dir_name) + "; cat > ./sync_server.py'"
-		#cmd = "cat ./sync_server.py | ssh root@" + str(self.m_url) + " 'python sync_server.py' " 
-		cmd = "cat ./sync_server.py | ssh root@" + str(self.m_url) + " 'cd " + str(dir_name) + "; python - " + str(self.m_port) +" > sync_serv_log 2>&1' "
+		#TODO make a more sophisticated bash(or python) script in a separate file to execute with ssh
+		cmd = "cat ./sync_server.py | ssh " + str(self.m_user) + "@" + str(self.m_url) + " 'cd " + str(dir_name) + "; python - " + str(self.m_port) +" > sync_serv_log 2>&1' "
 		print cmd
 		#os.system(cmd)
-		self.m_server_proc = subprocess.Popen(cmd, stdout = subprocess.PIPE, shell=True)
+		self.m_server_proc = subprocess.Popen(cmd, shell=True)
 		for retry in range(0, 10):
 			time.sleep(1)
 			self.get_syncserv_port()
@@ -105,6 +100,22 @@ class SyncClient():
 					else:
 						print "Server on: " + self.m_url + ":" + str(port) + " isn't sync server"
 			port += 1
+		return
+
+	def send_kill_signal(self):
+		print "Attempting to kill server at: " + self.m_user + "@" + self.m_url + ":" + str(self.m_port)
+		for retry in range(0, 10):
+			#print "Trying: " + str(self.m_url) + ":" + str(port)
+			resp = None
+			try:
+				resp = requests.get("http://" + self.m_url + ":" + str(self.m_port), params = {"hasta_la_vista": "baby"})
+			except Exception, e:
+				pass
+				#print str(e)
+			if resp:
+				if resp.status_code == 200:
+					print "Server successfuly killed"
+					return
 		return
 
 	def get_modified_objs(self):
@@ -144,15 +155,17 @@ if __name__ == "__main__":
 	if len(sys.argv) > 1:
 		endpoint = sys.argv[1]
 	else:
-		endpoint = "10.10.1.6:8000"
+		endpoint = "aduriseti@10.10.1.6:8000"
 	try:
+		[user, endpoint] = endpoint.split("@")
 		[url, port] = endpoint.split(":")
 		port = int(port)
 	except Exception, e:
 		print str(e)
+		user = "aduriseti"
 		url = endpoint
 		port = 8000
-	sync_client = SyncClient(url, port)
+	sync_client = SyncClient(user, url, port)
 	sync_client.start()
 
 

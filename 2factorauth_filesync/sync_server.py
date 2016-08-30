@@ -8,9 +8,17 @@ import sys
 import os
 import shutil
 import urlparse
+import threading
 
 
-class SyncServer(BaseHTTPRequestHandler):
+
+
+class SyncRequestHandler(BaseHTTPRequestHandler):
+
+	def __init__(self, serving = True, *args):
+		self.serving = serving
+		BaseHTTPRequestHandler.__init__(self, *args)
+
 	def do_GET(self):
 		print "In http get handler".upper()
 		print self.headers
@@ -21,6 +29,12 @@ class SyncServer(BaseHTTPRequestHandler):
 			self.send_response(200)
 			self.end_headers()
 			self.wfile.write("sync_server")
+			print "got connection from client of type: " + str(self.m_client_type).upper()
+		elif "hasta_la_vista" in query_components:
+			print "Client sent a termination signal - exiting".upper()
+			self.send_response(200)
+			self.end_headers()
+			self.serving = False
 		return
 
 	def do_POST(self):
@@ -82,26 +96,37 @@ class SyncServer(BaseHTTPRequestHandler):
 		self.end_headers()
 
 
+class SyncServer():
+	def __init__(self, host = "localhost", port = 8000):
+		self.m_host = host
+		self.m_port = port
+
+	def start():
+		sync_handler = SyncRequestHandler()
+		#try 100 ports above one specified
+		for retry in range(0, 100):
+			break
+			try:
+				#TODO: make https server for extra security
+				httpd = SocketServer.TCPServer((self.m_host, self.m_port), sync_handler)
+				print "serving at port", self.m_port
+				httpd.serve_forever()
+			except SocketServer.socket.error as exc:
+				print 'port ' + str(self.m_port) + ' already in use'
+				if exc.args[0] != 48 and exc.args[0] != 98:
+					print "raise"
+					raise
+				self.m_port += 1
+			else:
+				break
+
+
 if __name__ == "__main__":
 	if len(sys.argv) > 1:
 		port = int(sys.argv[1])
 	else:
 		port = 8000
-	Handler = SyncServer
-	#try 100 ports above one specified
-	for retry in range(0, 100):
-		try:
-			httpd = SocketServer.TCPServer(("", port), Handler)
-			print "serving at port", port
-			httpd.serve_forever()
-		except SocketServer.socket.error as exc:
-			print 'port ' + str(port) + ' already in use'
-			if exc.args[0] != 48 and exc.args[0] != 98:
-				print "raise"
-				raise
-			port += 1
-		else:
-			break
-
+	sync_server = SyncServer("localhost", port)
+	sync_server.start()
 
 
