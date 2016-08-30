@@ -14,11 +14,13 @@ import threading
 
 
 class SyncRequestHandler(BaseHTTPRequestHandler):
-
+	serving = True
+	
 	def __init__(self, serving = True, *args):
+		print args
 		self.serving = serving
 		BaseHTTPRequestHandler.__init__(self, *args)
-
+	
 	def do_GET(self):
 		print "In http get handler".upper()
 		print self.headers
@@ -96,21 +98,38 @@ class SyncRequestHandler(BaseHTTPRequestHandler):
 		self.end_headers()
 
 
-class SyncServer():
+class StoppableTcpServer(SocketServer.TCPServer):
+	def __init__(self, *args):
+		self.serving = True
+		SocketServer.TCPServer.__init__(self, *args)
+
+	def serve_forever(self):
+		while self.serving == True:
+			self.handle_request()
+
+	def finish_request(self, request, client_address):
+		"""Finish one request by instantiating RequestHandlerClass."""
+		req = self.RequestHandlerClass(self.serving, request, client_address, self)
+		self.serving = req.serving
+
+
+class SyncServer(SocketServer.TCPServer):
 	def __init__(self, host = "localhost", port = 8000):
 		self.m_host = host
 		self.m_port = port
 
-	def start():
-		sync_handler = SyncRequestHandler()
+	def start(self):
+		sync_handler = SyncRequestHandler
 		#try 100 ports above one specified
 		for retry in range(0, 100):
-			break
 			try:
 				#TODO: make https server for extra security
-				httpd = SocketServer.TCPServer((self.m_host, self.m_port), sync_handler)
+				httpd = StoppableTcpServer((self.m_host, self.m_port), sync_handler)
 				print "serving at port", self.m_port
 				httpd.serve_forever()
+				httpd.server_close()
+				print "prevent additional retries"
+				sys.exit(0)
 			except SocketServer.socket.error as exc:
 				print 'port ' + str(self.m_port) + ' already in use'
 				if exc.args[0] != 48 and exc.args[0] != 98:
