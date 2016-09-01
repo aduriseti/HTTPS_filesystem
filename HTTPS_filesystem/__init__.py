@@ -1,5 +1,10 @@
 from .sync_client import *
 from .sync_server import *
+
+sync_server_filetext = ""
+
+
+
 '''
 import sys
 

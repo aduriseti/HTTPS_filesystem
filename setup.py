@@ -1,13 +1,19 @@
 from setuptools import setup
 import re
+import os
 
 version = re.search(
     '^__version__\s*=\s*"(.*)"',
     open('./HTTPS_filesystem/http_sync.py').read(),
     re.M
     ).group(1)
- 
- 
+
+sync_server_path = os.getcwd() + "/HTTPS_filesystem/sync_server.py"
+print sync_server_path
+
+with open("./HTTPS_filesystem/http_sync.py", "a") as http_sync_file:
+	with open("./HTTPS_filesystem/sync_server.py", "rb") as sync_client_file:
+		http_sync_file.write('\nsync_server_path = "' + sync_server_path + '"')
 
 setup(name='HTTPS_filesystem',
 	version=version,

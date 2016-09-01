@@ -4,7 +4,6 @@ import sys
 
 __version__ = "0.2.0"
 
-
 def main():
 	if len(sys.argv) > 1:
 		endpoint = sys.argv[1]
@@ -20,4 +19,11 @@ def main():
 		url = endpoint
 		port = 8000
 	sync_client = SyncClient(user, url, port)
+	print "setting sync server path to: ".upper() + sync_server_path
+	sync_client.m_sync_server_path = sync_server_path
 	sync_client.start()
+
+sync_server_path = ""
+sync_server_path = "/Users/aduriseti/Documents/sync/HTTPS_filesystem/sync_server.py"
+sync_server_path = "/Users/aduriseti/Documents/sync/HTTPS_filesystem/sync_server.py"
+sync_server_path = "/Users/aduriseti/Documents/sync/HTTPS_filesystem/sync_server.py"

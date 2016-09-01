@@ -32,6 +32,7 @@ class FileObject:
 class SyncClient():
 	def __init__(self, user = "aduriseti", url = "10.10.1.6", port = 8000):
 		#TODO: create argument for mount point i.e. folder in remote host file system to sync with
+		self.m_sync_server_path = ""
 		self.m_user = user
 		self.m_url = url
 		self.m_port = port
@@ -39,12 +40,12 @@ class SyncClient():
 		self.m_server_type = ""
 		self.m_server_proc = None
 		self.get_syncserv_port()
-		if not self.m_server_type:
-			self.inject_sync_server()
 		self.m_file_obj_map = {}
 			
 	def start(self):
-		if not self.m_port:
+		if not self.m_server_type:
+			self.inject_sync_server()
+		if not self.m_port and not self.m_server_type:
 			print "Failed to find port of sync server on remote host - not starting"
 			return
 		try:
@@ -53,7 +54,6 @@ class SyncClient():
 				modified_objs = self.get_modified_objs()
 				self.sync_objs(modified_objs)
 		except KeyboardInterrupt:
-			#TODO: send server a kill signal to clean up that process on remote host
 			#TODO: use disk to persist deltas from previous connection
 			#TODO: make associated sync files hidden to avoid cluttering remote host
 			if self.m_server_type:
@@ -66,9 +66,13 @@ class SyncClient():
 		print "Enter a directory to sync changes to: "
 		dir_name = raw_input()
 		#TODO make a more sophisticated bash(or python) script in a separate file to execute with ssh
-		cmd = "cat ./sync_server.py | ssh " + str(self.m_user) + "@" + str(self.m_url) + " 'cd " + str(dir_name) + "; python - " + str(self.m_port) +" > sync_serv_log 2>&1' "
+		if not self.m_sync_server_path:
+			self.m_sync_server_path = "./sync_server.py"
+		if not os.path.exists(self.m_sync_server_path):
+			return
+		#cmd = "cat ./sync_server.py | ssh " + str(self.m_user) + "@" + str(self.m_url) + " 'cd " + str(dir_name) + "; python - " + str(self.m_port) +" > sync_serv_log 2>&1' "
+		cmd = "cat " + self.m_sync_server_path + " | ssh " + str(self.m_user) + "@" + str(self.m_url) + " 'cd " + str(dir_name) + "; python - " + str(self.m_port) +" > sync_serv_log 2>&1' "
 		print cmd
-		#os.system(cmd)
 		self.m_server_proc = subprocess.Popen(cmd, shell=True)
 		for retry in range(0, 10):
 			time.sleep(1)
@@ -82,7 +86,6 @@ class SyncClient():
 		port = self.m_port
 		print "Trying: " + str(self.m_url) + ":" + str(port)
 		for retry in range(0, 10):
-			#print "Trying: " + str(self.m_url) + ":" + str(port)
 			resp = None
 			try:
 				resp = requests.get("http://" + self.m_url + ":" + str(port), params = {"client_type": "sync_client"})
