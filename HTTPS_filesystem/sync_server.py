@@ -11,8 +11,6 @@ import urlparse
 import threading
 
 
-
-
 class SyncRequestHandler(BaseHTTPRequestHandler):
 	serving = True
 	
@@ -147,5 +145,4 @@ if __name__ == "__main__":
 		port = 8000
 	sync_server = SyncServer("", port)
 	sync_server.start()
-
 

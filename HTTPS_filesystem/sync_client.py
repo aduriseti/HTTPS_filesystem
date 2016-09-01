@@ -168,4 +168,3 @@ if __name__ == "__main__":
 	sync_client = SyncClient(user, url, port)
 	sync_client.start()
 
-
