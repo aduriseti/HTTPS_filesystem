@@ -2,7 +2,7 @@ from .sync_client import *
 from .sync_server import *
 import sys
 
-__version__ = "0.2.0"
+__version__ = "0.2.3"
 
 def main():
 	if len(sys.argv) > 1:
@@ -24,6 +24,7 @@ def main():
 	sync_client.start()
 
 sync_server_path = ""
+sync_server_path = "/Users/aduriseti/Documents/sync/HTTPS_filesystem/sync_server.py"
 sync_server_path = "/Users/aduriseti/Documents/sync/HTTPS_filesystem/sync_server.py"
 sync_server_path = "/Users/aduriseti/Documents/sync/HTTPS_filesystem/sync_server.py"
 sync_server_path = "/Users/aduriseti/Documents/sync/HTTPS_filesystem/sync_server.py"

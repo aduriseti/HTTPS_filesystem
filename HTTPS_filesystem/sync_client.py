@@ -16,7 +16,7 @@ def pretty_print(data):
 
 class FileObject:
 	def __init__(self, filepath, sync_created = False):
-		self.m_filepath = filepath
+		self.m_abs_path = filepath
 		self.m_size = os.stat(filepath).st_size
 		self.m_tmod = os.stat(filepath).st_mtime
 		self.m_sync_created = sync_created
@@ -24,14 +24,17 @@ class FileObject:
 
 	def update(self, filepath = None):
 		if not filepath:
-			filepath = self.m_filepath
+			filepath = self.m_abs_path
 		self.m_size = os.stat(filepath).st_size
 		self.m_tmod = os.stat(filepath).st_mtime
 
 
 class SyncClient():
 	def __init__(self, user = "aduriseti", url = "10.10.1.6", port = 8000):
+		#TODO: create recursive argument for recursive sync
 		#TODO: create argument for mount point i.e. folder in remote host file system to sync with
+		#	-this feature should support multiple servers running on the remote host so that multiple mount points
+		#	 can be maintained independently
 		self.m_sync_server_path = ""
 		self.m_user = user
 		self.m_url = url
@@ -61,7 +64,7 @@ class SyncClient():
 			if self.m_server_proc:
 				self.m_server_proc.kill()
 			sys.exit(0)
-
+			
 	def inject_sync_server(self):
 		print "Enter a directory to sync changes to: "
 		dir_name = raw_input()
@@ -70,7 +73,7 @@ class SyncClient():
 			self.m_sync_server_path = "./sync_server.py"
 		if not os.path.exists(self.m_sync_server_path):
 			return
-		#cmd = "cat ./sync_server.py | ssh " + str(self.m_user) + "@" + str(self.m_url) + " 'cd " + str(dir_name) + "; python - " + str(self.m_port) +" > sync_serv_log 2>&1' "
+		#TODO: send the local ip address as argument to sync server so only connections from this machine are accepted
 		cmd = "cat " + self.m_sync_server_path + " | ssh " + str(self.m_user) + "@" + str(self.m_url) + " 'cd " + str(dir_name) + "; python - " + str(self.m_port) +" > sync_serv_log 2>&1' "
 		print cmd
 		self.m_server_proc = subprocess.Popen(cmd, shell=True)
@@ -80,7 +83,6 @@ class SyncClient():
 			if self.m_server_type: return
 		self.m_server_proc.kill()
 
-	#TODO: establish connection open protocol to establish that the server on the other end is a sync server
 	def get_syncserv_port(self):
 		#try 100 ports above one specified in __init__
 		port = self.m_port
@@ -108,7 +110,6 @@ class SyncClient():
 	def send_kill_signal(self):
 		print "Attempting to kill server at: " + self.m_user + "@" + self.m_url + ":" + str(self.m_port)
 		for retry in range(0, 10):
-			#print "Trying: " + str(self.m_url) + ":" + str(port)
 			resp = None
 			try:
 				resp = requests.get("http://" + self.m_url + ":" + str(self.m_port), params = {"hasta_la_vista": "baby"})
@@ -121,6 +122,8 @@ class SyncClient():
 					return
 		return
 
+	#SHALLOW IMPLEMENTATION
+	'''
 	def get_modified_objs(self):
 		modified_objs = []
 		for filename in os.listdir(self.m_cwd):
@@ -137,15 +140,47 @@ class SyncClient():
 				self.m_file_obj_map[filepath] = FileObject(filepath)
 				modified_objs.append(self.m_file_obj_map[filepath])
 		return modified_objs
+	'''
+
+	#RECURSIVE IMPL
+	def get_modified_objs(self):
+		modified_objs = []
+		dir_nodes = [self.m_cwd]
+		dir_nodes = [self.m_cwd]
+		while len(dir_nodes) > 0:
+			dir_node, sub_dirs, filenames = os.walk(dir_nodes.pop()).next()
+			# Join the two strings in order to form the full filepath.
+			dir_nodes += [dir_node + "/" + sub_dir for sub_dir in sub_dirs]
+			filepaths = [dir_node + "/" + filename for filename in filenames]
+			for filepath in filepaths:
+				if not os.path.isfile(filepath): continue
+				if filepath in self.m_file_obj_map:
+					file_obj = self.m_file_obj_map[filepath]
+					old_size = file_obj.m_size
+					file_obj.update()
+					if file_obj.m_tmod > file_obj.m_tsync or file_obj.m_size != old_size:
+						modified_objs.append(file_obj)
+				else:
+					file_obj = FileObject(filepath)
+					file_obj.m_rel_path = "." + filepath.split(self.m_cwd)[1]
+					self.m_file_obj_map[filepath] = file_obj
+					modified_objs.append(file_obj)
+		return modified_objs
 
 	def sync_objs(self, modified_objs):
+		#TODO: support recursive sync mode
 		if not self.m_server_type:
 			return
 		for file_obj in modified_objs:
-			filepath = file_obj.m_filepath
+			filepath = file_obj.m_abs_path
 			print "Syncing: " + filepath
+			print "Rel path: " + file_obj.m_rel_path
 			try:
-				resp = requests.post("http://" + self.m_url + ":" + str(self.m_port), files={"upload_file": open(filepath, 'rb')})
+				resp = requests.post(
+					"http://" + self.m_url + ":" + str(self.m_port), 
+					files={"upload_file": open(filepath, 'rb')}, 
+					params = {"rel_path": file_obj.m_rel_path, "abs_path": file_obj.m_abs_path}
+				)
 				if resp.status_code == 200:
 					file_obj.m_tsync = time.time()
 			except Exception, e:
